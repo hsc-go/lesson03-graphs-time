@@ -45,19 +45,6 @@ fig1 = px.line(
 fig1.update_traces(
     hovertemplate="날짜: %{x|%Y-%m-%d}<br>일일 관객수: %{y:,}명<extra></extra>"
 )
-
-# 선택한 영화의 상영 기간이 하루뿐이면 Plotly가 x축을 숫자형으로 오인해
-# 초 단위 눈금을 만드는 문제가 있어, 축 타입과 범위·눈금 간격을 모두 명시적으로 고정한다.
-min_date, max_date = movie_df["날짜"].min(), movie_df["날짜"].max()
-single_day = min_date == max_date
-padding = pd.Timedelta(days=3) if single_day else (max_date - min_date) * 0.05
-
-fig1.update_xaxes(
-    type="date",
-    range=[min_date - padding, max_date + padding],
-    tickformat="%Y-%m-%d",
-    dtick="D1" if single_day else None,
-)
 fig1.update_layout(hovermode="x unified")
 
 st.plotly_chart(fig1, use_container_width=True)
@@ -132,5 +119,44 @@ fig3.add_scatter(
 )
 
 st.plotly_chart(fig3, use_container_width=True)
+
+st.info("**이 그래프로 알 수 있는 것:** (여기에 문구를 입력하세요)")
+
+st.divider()
+
+# ----------------------------------------------------------------------------
+# 4. 일관객 합계 TOP 10 (가로 막대그래프)
+# ----------------------------------------------------------------------------
+st.header("4. 일관객 합계 TOP 10")
+
+movie_summary = (
+    df.groupby("영화명")
+    .agg(합계관객=("일관객", "sum"), 등장일수=("날짜", "count"))
+    .reset_index()
+)
+top10_summary = movie_summary.sort_values("합계관객", ascending=False).head(10)
+# 가로 막대그래프는 데이터 순서상 아래에서 위로 그려지므로,
+# 관객이 많은 영화가 위에 오도록 오름차순으로 정렬해 전달한다.
+top10_summary = top10_summary.sort_values("합계관객", ascending=True)
+
+fig4 = px.bar(
+    top10_summary,
+    x="합계관객",
+    y="영화명",
+    orientation="h",
+    title="이 기간 일관객 합계 TOP 10",
+    labels={"합계관객": "일관객 합계", "영화명": "영화"},
+    custom_data=["등장일수"],
+)
+fig4.update_traces(
+    hovertemplate=(
+        "영화: %{y}<br>"
+        "일관객 합계: %{x:,}명<br>"
+        "10위권에 든 날수: %{customdata[0]}일<extra></extra>"
+    )
+)
+fig4.update_layout(yaxis_title=None)
+
+st.plotly_chart(fig4, use_container_width=True)
 
 st.info("**이 그래프로 알 수 있는 것:** (여기에 문구를 입력하세요)")
