@@ -45,6 +45,19 @@ fig1 = px.line(
 fig1.update_traces(
     hovertemplate="날짜: %{x|%Y-%m-%d}<br>일일 관객수: %{y:,}명<extra></extra>"
 )
+
+# 선택한 영화의 상영 기간이 하루뿐이면 Plotly가 x축을 숫자형으로 오인해
+# 초 단위 눈금을 만드는 문제가 있어, 축 타입과 범위·눈금 간격을 모두 명시적으로 고정한다.
+min_date, max_date = movie_df["날짜"].min(), movie_df["날짜"].max()
+single_day = min_date == max_date
+padding = pd.Timedelta(days=3) if single_day else (max_date - min_date) * 0.05
+
+fig1.update_xaxes(
+    type="date",
+    range=[min_date - padding, max_date + padding],
+    tickformat="%Y-%m-%d",
+    dtick="D1" if single_day else None,
+)
 fig1.update_layout(hovermode="x unified")
 
 st.plotly_chart(fig1, use_container_width=True)
