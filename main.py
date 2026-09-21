@@ -160,3 +160,41 @@ fig4.update_layout(yaxis_title=None)
 st.plotly_chart(fig4, use_container_width=True)
 
 st.info("**이 그래프로 알 수 있는 것:** (여기에 문구를 입력하세요)")
+
+st.divider()
+
+# ----------------------------------------------------------------------------
+# 5. 월 x 요일별 일관객 합계 (히트맵)
+# ----------------------------------------------------------------------------
+st.header("5. 월 x 요일별 일관객 합계")
+
+weekday_labels = ["월", "화", "수", "목", "금", "토", "일"]
+
+heatmap_src = df.copy()
+heatmap_src["월"] = heatmap_src["날짜"].dt.month
+heatmap_src["요일번호"] = heatmap_src["날짜"].dt.weekday  # 0=월요일 ... 6=일요일
+
+heatmap_grouped = (
+    heatmap_src.groupby(["요일번호", "월"])["일관객"].sum().reset_index()
+)
+
+pivot = heatmap_grouped.pivot(index="요일번호", columns="월", values="일관객")
+pivot = pivot.reindex(index=range(7), columns=sorted(heatmap_src["월"].unique()))
+pivot.index = weekday_labels  # 월요일부터 일요일 순서로 라벨링
+
+fig5 = px.imshow(
+    pivot,
+    color_continuous_scale="Reds",
+    aspect="auto",
+    labels=dict(x="월", y="요일", color="일관객 합계"),
+    title="월 x 요일별 일관객 합계 (진할수록 관객 많음)",
+)
+fig5.update_xaxes(dtick=1, title="월")
+fig5.update_yaxes(title="요일")
+fig5.update_traces(
+    hovertemplate="월: %{x}월<br>요일: %{y}<br>일관객 합계: %{z:,}명<extra></extra>"
+)
+
+st.plotly_chart(fig5, use_container_width=True)
+
+st.info("**이 그래프로 알 수 있는 것:** (여기에 문구를 입력하세요)")
