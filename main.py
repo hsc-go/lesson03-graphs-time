@@ -1,3 +1,6 @@
+import io
+
+import requests
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -14,7 +17,12 @@ DATA_URL = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv(DATA_URL)
+    # GitHub raw 서버가 User-Agent가 없는 요청(pandas 기본 urllib)을 막는 경우가 있어
+    # requests로 브라우저처럼 보이는 헤더를 붙여 받아온 뒤 pandas에 전달한다.
+    headers = {"User-Agent": "Mozilla/5.0"}
+    response = requests.get(DATA_URL, headers=headers, timeout=10)
+    response.raise_for_status()
+    df = pd.read_csv(io.StringIO(response.text))
     # 날짜(예: 20250901) -> datetime으로 변환
     df["날짜"] = pd.to_datetime(df["날짜"].astype(str), format="%Y%m%d")
     return df
