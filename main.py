@@ -12,23 +12,40 @@ st.set_page_config(page_title="영화 데이터 그래프 도감 1 - 시간", la
 st.title("영화 데이터 그래프 도감 1 - 시간")
 st.caption("KOBIS 일별 박스오피스 데이터(최근 1년, 10위권)를 활용한 시간 관련 그래프 모음")
 
-DATA_URL = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_daily.csv"
+# raw.githubusercontent.com이 배포 환경 IP에서 간헐적으로 요청을 막는 경우가 있어,
+# 캐싱이 되어 더 안정적인 jsDelivr CDN 미러를 우선 시도하고, 실패하면 원본 주소로 재시도한다.
+DATA_URLS = [
+    "https://cdn.jsdelivr.net/gh/greatsong/modudata@main/data/kobis_daily.csv",
+    "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_daily.csv",
+]
 
 
 @st.cache_data
 def load_data():
-    # GitHub raw 서버가 User-Agent가 없는 요청(pandas 기본 urllib)을 막는 경우가 있어
-    # requests로 브라우저처럼 보이는 헤더를 붙여 받아온 뒤 pandas에 전달한다.
     headers = {"User-Agent": "Mozilla/5.0"}
-    response = requests.get(DATA_URL, headers=headers, timeout=10)
-    response.raise_for_status()
-    df = pd.read_csv(io.StringIO(response.text))
-    # 날짜(예: 20250901) -> datetime으로 변환
-    df["날짜"] = pd.to_datetime(df["날짜"].astype(str), format="%Y%m%d")
-    return df
+    last_error = None
+    for url in DATA_URLS:
+        try:
+            response = requests.get(url, headers=headers, timeout=15)
+            response.raise_for_status()
+            df = pd.read_csv(io.StringIO(response.text))
+            # 날짜(예: 20250901) -> datetime으로 변환
+            df["날짜"] = pd.to_datetime(df["날짜"].astype(str), format="%Y%m%d")
+            return df
+        except Exception as e:  # noqa: BLE001
+            last_error = e
+            continue
+    raise RuntimeError(f"데이터를 불러오지 못했습니다: {last_error}")
 
 
-df = load_data()
+try:
+    df = load_data()
+except Exception as e:  # noqa: BLE001
+    st.error(
+        "데이터를 불러오는 데 실패했습니다. 잠시 후 앱을 새로고침(우측 상단 메뉴 > Rerun)해 주세요.\n\n"
+        f"오류 내용: {e}"
+    )
+    st.stop()
 
 st.divider()
 
